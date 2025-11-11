@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benchmark Function Visualization</title>
+    <!-- Load Plotly.js for 3D plotting -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Use Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Ensure plots are responsive */
+        .plotly-graph-div {
+            width: 100%;
+            height: 450px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white p-8">
+
+    <div class="container mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8">Benchmark Functions (3D Visualization)</h1>
+
+        <!-- Placeholder for Ackley function plot -->
+
+        <!-- Placeholder for Griewank function plot -->
+
+
+        <!-- Grid for the 4 plots -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <!-- Plot 1: Ackley Function -->
+            <div class="bg-gray-800 rounded-lg shadow-lg p-4">
+                <div id="ackleyPlot"></div>
+            </div>
+
+            <!-- Plot 2: Schwefel Problem 1.2 -->
+            <div class="bg-gray-800 rounded-lg shadow-lg p-4">
+                <div id="schwefelPlot"></div>
+            </div>
+
+            <!-- Plot 3: Griewank Function -->
+            <div class="bg-gray-800 rounded-lg shadow-lg p-4">
+                <div id="griewankPlot"></div>
+            </div>
+
+            <!-- Plot 4: High Conditional Elliptic Function -->
+            <div class="bg-gray-800 rounded-lg shadow-lg p-4">
+                <div id="ellipticPlot"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+
+            // --- Helper Function to Generate Plot Data ---
+
+            /**
+             * Generates 2D grid data for a 3D surface plot.
+             * @param {function} func The benchmark function (x, y) => z
+             * @param {Array<number>} xRange [min, max] for x-axis
+             * @param {Array<number>} yRange [min, max] for y-axis
+             * @param {number} steps The resolution (number of points)
+             * @returns {object} {x, y, z} data for Plotly
+             */
+            function generateData(func, xRange, yRange, steps) {
+                const x = [];
+                const y = [];
+                const z = [];
+
+                const xStep = (xRange[1] - xRange[0]) / steps;
+                const yStep = (yRange[1] - yRange[0]) / steps;
+
+                for (let i = 0; i <= steps; i++) {
+                    x.push(xRange[0] + i * xStep);
+                    y.push(yRange[0] + i * yStep);
+                }
+
+                for (let i = 0; i <= steps; i++) {
+                    const zRow = [];
+                    for (let j = 0; j <= steps; j++) {
+                        zRow.push(func(x[j], y[i]));
+                    }
+                    z.push(zRow);
+                }
+
+                return { x, y, z, type: 'surface', colorscale: 'Viridis', showscale: false };
+            }
+
+            // --- Benchmark Function Definitions (2D) ---
+
+            /**
+             * Ackley Function
+             * Global minimum at f(0, 0) = 0
+             * Characterized by many local minima.
+             */
+            function ackley(x, y) {
+                const a = 20, b = 0.2, c = 2 * Math.PI;
+                const term1 = -a * Math.exp(-b * Math.sqrt(0.5 * (x * x + y * y)));
+                const term2 = -Math.exp(0.5 * (Math.cos(c * x) + Math.cos(c * y)));
+                return term1 + term2 + a + Math.E;
+            }
+
+            /**
+             * Schwefel Problem 1.2
+             * Global minimum at f(0, 0) = 0
+             * A smooth, convex, uni-modal function (rotated ellipsoid).
+             */
+            function schwefel1_2(x, y) {
+                // For 2D: f(x, y) = (x)^2 + (x + y)^2
+                return (x * x) + Math.pow(x + y, 2);
+            }
+
+            /**
+             * Griewank Function
+             * Global minimum at f(0, 0) = 0
+             * Has a parabolic shape globally, but with many local minima (ripples).
+             */
+            function griewank(x, y) {
+                // For 2D: f(x, y) = (x^2/4000 + y^2/4000) - (cos(x) * cos(y/sqrt(2))) + 1
+                const term1 = (x * x / 4000) + (y * y / 4000);
+                const term2 = Math.cos(x) * Math.cos(y / Math.sqrt(2));
+                return term1 - term2 + 1;
+            }
+
+            /**
+             * High Conditional Elliptic Function
+             * Global minimum at f(0, 0) = 0
+             * A very steep, uni-modal valley. Difficult for algorithms due to conditioning.
+             */
+            function highConditionalElliptic(x, y) {
+                // For 2D: f(x, y) = (10^6)^0 * x^2 + (10^6)^1 * y^2
+                return (x * x) + (1000000 * y * y);
+            }
+
+            // --- Plotting ---
+
+            /**
+             * Creates a reusable layout object for the 3D plots with dark theme.
+             * @param {string} title The title for the plot
+             */
+            function getPlotLayout(title) {
+                return {
+                    title: { text: title, font: { color: 'white' } },
+                    scene: {
+                        xaxis: { title: 'x', color: 'white', gridcolor: 'gray', zerolinecolor: 'white' },
+                        yaxis: { title: 'y', color: 'white', gridcolor: 'gray', zerolinecolor: 'white' },
+                        zaxis: { title: 'f(x, y)', color: 'white', gridcolor: 'gray', zerolinecolor: 'white' }
+                    },
+                    plot_bgcolor: '#1f2937', // bg-gray-800
+                    paper_bgcolor: '#1f2937' // bg-gray-800
+                };
+            }
+
+            // Generate and render all four plots
+
+            // 1. Ackley
+            const ackleyData = generateData(ackley, [-5, 5], [-5, 5], 100);
+            const ackleyLayout = getPlotLayout('Ackley Function');
+            Plotly.newPlot('ackleyPlot', [ackleyData], ackleyLayout);
+
+            // 2. Schwefel 1.2
+            const schwefelData = generateData(schwefel1_2, [-50, 50], [-50, 50], 100);
+            const schwefelLayout = getPlotLayout('Schwefel Problem 1.2');
+            Plotly.newPlot('schwefelPlot', [schwefelData], schwefelLayout);
+
+            // 3. Griewank
+            const griewankData = generateData(griewank, [-50, 50], [-50, 50], 100);
+            const griewankLayout = getPlotLayout('Griewank Function');
+            Plotly.newPlot('griewankPlot', [griewankData], griewankLayout);
+
+            // 4. High Conditional Elliptic
+            const ellipticData = generateData(highConditionalElliptic, [-5, 5], [-5, 5], 100);
+            const ellipticLayout = getPlotLayout('High Conditional Elliptic');
+            Plotly.newPlot('ellipticPlot', [ellipticData], ellipticLayout);
+
+        });
+    </script>
+</body>
+
+</html>
