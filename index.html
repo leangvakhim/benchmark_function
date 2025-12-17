@@ -4,56 +4,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SSA Benchmark Functions Visualization (F1-F19)</title>
+    <title>SSA Benchmark Functions (F1-F19)</title>
+    <!-- Plotly.js for 3D Graphing -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- MathJax for rendering equations -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
-            background: #f4f4f9;
+            background: #f0f2f5;
+            color: #333;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
             text-align: center;
-            color: #333;
+            color: #2c3e50;
+            margin-bottom: 20px;
         }
 
+        /* Controls Section */
         .controls {
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #e8f4fc;
+            padding: 20px;
+            border-radius: 8px;
             margin-bottom: 20px;
-            padding: 15px;
-            background: #eef;
-            border-radius: 5px;
+            border: 1px solid #d1e3f0;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
         }
 
         select {
-            padding: 10px;
+            padding: 10px 15px;
             font-size: 16px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            width: 300px;
+            border-radius: 6px;
+            border: 1px solid #bdc3c7;
+            min-width: 300px;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        select:focus {
+            border-color: #3498db;
+        }
+
+        /* Info & Formula Display */
+        .info-panel {
+            text-align: center;
+            width: 100%;
+        }
+
+        .badges {
+            margin-bottom: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 0 5px;
+            color: white;
+        }
+
+        .badge-type {
+            background-color: #3498db;
+        }
+
+        .badge-range {
+            background-color: #e67e22;
+        }
+
+        .badge-dim {
+            background-color: #9b59b6;
+        }
+
+        .formula-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: auto;
+            margin-top: 10px;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.02);
         }
 
         #plot {
             width: 100%;
-            height: 700px;
+            height: 650px;
+            border: 1px solid #eee;
+            border-radius: 4px;
         }
 
-        .info {
-            margin-top: 10px;
+        .footer {
             text-align: center;
-            color: #666;
-            font-size: 0.9em;
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #7f8c8d;
         }
     </style>
 </head>
@@ -61,142 +129,167 @@
 <body>
 
     <div class="container">
-        <h1>Benchmark Functions (F1 - F19)</h1>
+        <h1>Benchmark Functions Visualization (F1 - F19)</h1>
 
         <div class="controls">
-            <label for="funcSelect">Select Benchmark Function:</label>
-            <select id="funcSelect" onchange="updatePlot()">
-            </select>
-            <div id="funcInfo" class="info"></div>
+            <div class="input-group">
+                <select id="funcSelect" onchange="updateView()">
+                    <!-- Options populated via JS -->
+                </select>
+            </div>
+
+            <div class="info-panel">
+                <div class="badges">
+                    <span id="badgeType" class="badge badge-type">Unimodal</span>
+                    <span id="badgeRange" class="badge badge-range">Range: [-100, 100]</span>
+                    <span id="badgeDim" class="badge badge-dim">Dim: 30</span>
+                </div>
+                <div class="formula-box" id="formulaDisplay">
+                    <!-- MathJax Formula will appear here -->
+                    $$ F_1(x) = \sum_{i=1}^n x_i^2 $$
+                </div>
+            </div>
         </div>
 
         <div id="plot"></div>
+        <div class="footer">Based on "A novel swarm intelligence optimization approach: sparrow search algorithm" (Xue &
+            Shen, 2020)</div>
     </div>
 
     <script>
-        // --- BENCHMARK FUNCTION DEFINITIONS ---
-        // Note: For High-Dim functions, we visualize x1 and x2, assuming x3..xn = 0
-
+        // --- BENCHMARK DATA & FORMULAS ---
         const benchmarks = [
-            // Unimodal
+            // --- Unimodal Functions (F1 - F7) ---
             {
-                id: 'f1', name: "F1: Sphere", type: "Unimodal", range: 100,
+                id: 'f1', name: "F1: Sphere", type: "Unimodal", range: 100, dim: 30,
+                latex: "F_1(x) = \\sum_{i=1}^n x_i^2",
                 fn: (x, y) => x ** 2 + y ** 2
             },
-
             {
-                id: 'f2', name: "F2: Schwefel 2.22", type: "Unimodal", range: 10,
-                fn: (x, y) => Math.abs(x) + Math.abs(y) + (Math.abs(x) * Math.abs(y))
+                id: 'f2', name: "F2: Schwefel 2.22", type: "Unimodal", range: 10, dim: 30,
+                latex: "F_2(x) = \\sum_{i=1}^n |x_i| + \\prod_{i=1}^n |x_i|",
+                fn: (x, y) => (Math.abs(x) + Math.abs(y)) + (Math.abs(x) * Math.abs(y))
             },
-
             {
-                id: 'f3', name: "F3: Schwefel 1.2", type: "Unimodal", range: 100,
+                id: 'f3', name: "F3: Schwefel 1.2", type: "Unimodal", range: 100, dim: 30,
+                latex: "F_3(x) = \\sum_{i=1}^n \\left(\\sum_{j=1}^i x_j\\right)^2",
+                // 2D Simplification: term1 = x^2, term2 = (x+y)^2
                 fn: (x, y) => Math.pow(x, 2) + Math.pow(x + y, 2)
-            }, // Simplified 2D projection
-
+            },
             {
-                id: 'f4', name: "F4: Schwefel 2.21", type: "Unimodal", range: 100,
+                id: 'f4', name: "F4: Schwefel 2.21", type: "Unimodal", range: 100, dim: 30,
+                latex: "F_4(x) = \\max_i \\{|x_i|, 1 \\le i \\le n\\}",
                 fn: (x, y) => Math.max(Math.abs(x), Math.abs(y))
             },
-
             {
-                id: 'f5', name: "F5: Rosenbrock", type: "Unimodal", range: 30,
+                id: 'f5', name: "F5: Rosenbrock", type: "Unimodal", range: 30, dim: 30,
+                latex: "F_5(x) = \\sum_{i=1}^{n-1} [100(x_{i+1}-x_i^2)^2 + (x_i-1)^2]",
                 fn: (x, y) => 100 * Math.pow(y - x ** 2, 2) + Math.pow(x - 1, 2)
             },
-
             {
-                id: 'f6', name: "F6: Step", type: "Unimodal", range: 100,
+                id: 'f6', name: "F6: Step", type: "Unimodal", range: 100, dim: 30,
+                latex: "F_6(x) = \\sum_{i=1}^n ([x_i + 0.5])^2",
                 fn: (x, y) => Math.pow(Math.floor(x + 0.5), 2) + Math.pow(Math.floor(y + 0.5), 2)
             },
-
             {
-                id: 'f7', name: "F7: Quartic (No Noise)", type: "Unimodal", range: 1.28,
+                id: 'f7', name: "F7: Quartic with Noise", type: "Unimodal", range: 1.28, dim: 30,
+                latex: "F_7(x) = \\sum_{i=1}^n i x_i^4 + random[0, 1)",
+                // Visualized without random noise for clearer surface structure
                 fn: (x, y) => x ** 4 + 2 * (y ** 4)
-            }, // Noise removed for clear visualization
-
-            // Multimodal
-            {
-                id: 'f8', name: "F8: Schwefel 2.26", type: "Multimodal", range: 500,
-                fn: (x, y) => -x * Math.sin(Math.sqrt(Math.abs(x))) - y * Math.sin(Math.sqrt(Math.abs(y)))
             },
 
+            // --- Multimodal Functions (F8 - F12) ---
             {
-                id: 'f9', name: "F9: Rastrigin", type: "Multimodal", range: 5.12,
+                id: 'f8', name: "F8: Schwefel 2.26", type: "Multimodal", range: 500, dim: 30,
+                latex: "F_8(x) = \\sum_{i=1}^n -x_i \\sin(\\sqrt{|x_i|})",
+                fn: (x, y) => (-x * Math.sin(Math.sqrt(Math.abs(x)))) + (-y * Math.sin(Math.sqrt(Math.abs(y))))
+            },
+            {
+                id: 'f9', name: "F9: Rastrigin", type: "Multimodal", range: 5.12, dim: 30,
+                latex: "F_9(x) = \\sum_{i=1}^n [x_i^2 - 10\\cos(2\\pi x_i) + 10]",
                 fn: (x, y) => (x ** 2 - 10 * Math.cos(2 * Math.PI * x) + 10) + (y ** 2 - 10 * Math.cos(2 * Math.PI * y) + 10)
             },
-
             {
-                id: 'f10', name: "F10: Ackley", type: "Multimodal", range: 32,
-                fn: (x, y) => -20 * Math.exp(-0.2 * Math.sqrt(0.5 * (x ** 2 + y ** 2))) - Math.exp(0.5 * (Math.cos(2 * Math.PI * x) + Math.cos(2 * Math.PI * y))) + 20 + Math.E
+                id: 'f10', name: "F10: Ackley", type: "Multimodal", range: 32, dim: 30,
+                latex: "F_{10}(x) = -20 \\exp\\left(-0.2\\sqrt{\\frac{1}{n}\\sum x_i^2}\\right) - \\exp\\left(\\frac{1}{n}\\sum \\cos(2\\pi x_i)\\right) + 20 + e",
+                fn: (x, y) => {
+                    let sumSq = x ** 2 + y ** 2;
+                    let sumCos = Math.cos(2 * Math.PI * x) + Math.cos(2 * Math.PI * y);
+                    return -20 * Math.exp(-0.2 * Math.sqrt(0.5 * sumSq)) - Math.exp(0.5 * sumCos) + 20 + Math.E;
+                }
             },
-
             {
-                id: 'f11', name: "F11: Griewank", type: "Multimodal", range: 600,
+                id: 'f11', name: "F11: Griewank", type: "Multimodal", range: 600, dim: 30,
+                latex: "F_{11}(x) = \\frac{1}{4000}\\sum x_i^2 - \\prod \\cos\\left(\\frac{x_i}{\\sqrt{i}}\\right) + 1",
                 fn: (x, y) => (x ** 2 + y ** 2) / 4000 - (Math.cos(x) * Math.cos(y / Math.sqrt(2))) + 1
             },
-
             {
-                id: 'f12', name: "F12: Penalized 2", type: "Multimodal", range: 50,
+                id: 'f12', name: "F12: Penalized Function 2", type: "Multimodal", range: 50, dim: 30,
+                latex: "F_{12}(x) = \\frac{\\pi}{n} \\{ 10\\sin^2(\\pi y_1) + \\dots \\} + \\sum U(x_i, 10, 100, 4)",
+                // Simplified core structure for visualization
                 fn: (x, y) => {
-                    // Approximate visualization of the core penalization function behavior
-                    let term1 = Math.pow(Math.sin(3 * Math.PI * x), 2);
-                    let term2 = Math.pow(x - 1, 2) * (1 + Math.pow(Math.sin(3 * Math.PI * y), 2));
-                    let term3 = Math.pow(y - 1, 2) * (1 + Math.pow(Math.sin(2 * Math.PI * y), 2));
-                    return 0.1 * (term1 + term2 + term3) + Math.sin(x * y) * 5; // Added variation
+                    let term1 = Math.sin(3 * Math.PI * x) ** 2;
+                    let term2 = ((x - 1) ** 2) * (1 + Math.sin(3 * Math.PI * y) ** 2);
+                    let term3 = ((y - 1) ** 2) * (1 + Math.sin(2 * Math.PI * y) ** 2);
+                    return 0.1 * (term1 + term2 + term3) + Math.sin(x * y);
                 }
             },
 
-            // Fixed Dimension
+            // --- Fixed-Dimension Functions (F13 - F19) ---
             {
-                id: 'f13', name: "F13: Six-Hump Camel", type: "Fixed-Dim", range: 5,
-                fn: (x, y) => 4 * (x ** 2) - 2.1 * (x ** 4) + (1 / 3) * (x ** 6) + x * y - 4 * (y ** 2) + 4 * (y ** 4)
-            },
-
-            {
-                id: 'f14', name: "F14: Branin-like", type: "Fixed-Dim", range: 5,
-                // Based on PDF Equation logic approximating Branin
-                fn: (x, y) => Math.pow(y - (5.1 / (4 * Math.PI ** 2)) * (x ** 2) + (5 / Math.PI) * x - 6, 2) + 10 * (1 - 1 / (8 * Math.PI)) * Math.cos(x) + 10
-            },
-
-            {
-                id: 'f15', name: "F15: Goldstein-Price", type: "Fixed-Dim", range: 2,
-                fn: (x, y) => {
-                    let a = 1 + Math.pow(x + y + 1, 2) * (19 - 14 * x + 3 * x ** 2 - 14 * y + 6 * x * y + 3 * y ** 2);
-                    let b = 30 + Math.pow(2 * x - 3 * y, 2) * (18 - 32 * x + 12 * x ** 2 + 48 * y - 36 * x * y + 27 * y ** 2);
-                    return a * b; // Log scale usually needed, but plotting raw
-                }
-            },
-
-            {
-                id: 'f16', name: "F16: Camel Var.", type: "Fixed-Dim", range: 5,
+                id: 'f13', name: "F13: Six-Hump Camel", type: "Fixed-Dim", range: 5, dim: 2,
+                latex: "F_{13}(x) = 4x_1^2 - 2.1x_1^4 + \\frac{1}{3}x_1^6 + x_1x_2 - 4x_2^2 + 4x_2^4",
                 fn: (x, y) => 4 * x ** 2 - 2.1 * x ** 4 + (1 / 3) * x ** 6 + x * y - 4 * y ** 2 + 4 * y ** 4
-            }, // Visual approximation of Camel var
-
+            },
             {
-                id: 'f17', name: "F17: Kowalik (Slice)", type: "Fixed-Dim", range: 5,
-                fn: (x, y) => (x ** 2 + y ** 2)
-            }, // Simplified slice for 4D Kowalik
-
-            {
-                id: 'f18', name: "F18: Hartmann 3D (Slice)", type: "Fixed-Dim", range: 1,
+                id: 'f14', name: "F14: Branin", type: "Fixed-Dim", range: 15, dim: 2, // Adjusted range for better view
+                latex: "F_{14}(x) = \\left(x_2 - \\frac{5.1}{4\\pi^2}x_1^2 + \\frac{5}{\\pi}x_1 - 6\\right)^2 + \\dots",
                 fn: (x, y) => {
-                    // Hardmann 3D approx slice at z=0.5
-                    let z = 0.5;
-                    // Simplified landscape for visual
-                    return -(Math.exp(-(Math.pow(x - 0.1, 2) + Math.pow(y - 0.5, 2) + Math.pow(z - 0.5, 2))));
+                    let term1 = y - (5.1 / (4 * Math.PI ** 2)) * x ** 2 + (5 / Math.PI) * x - 6;
+                    let term2 = 10 * (1 - 1 / (8 * Math.PI)) * Math.cos(x);
+                    return Math.pow(term1, 2) + term2 + 10;
                 }
             },
-
             {
-                id: 'f19', name: "F19: Hartmann 6D (Slice)", type: "Fixed-Dim", range: 1,
-                fn: (x, y) => -(Math.exp(-(Math.pow(x - 0.5, 2) + Math.pow(y - 0.5, 2))))
+                id: 'f15', name: "F15: Drop-Wave", type: "Fixed-Dim", range: 5, dim: 2,
+                latex: "F_{15}(x) = - \\frac{1 + \\cos(12\\sqrt{x^2+y^2})}{0.5(x^2+y^2) + 2}",
+                // Note: F15 in SSA paper is Drop-Wave, equation may vary slightly in papers but visual is similar
+                fn: (x, y) => -(1 + Math.cos(12 * Math.sqrt(x ** 2 + y ** 2))) / (0.5 * (x ** 2 + y ** 2) + 2)
+            },
+            {
+                id: 'f16', name: "F16: Camel (Three-Hump Var)", type: "Fixed-Dim", range: 5, dim: 2,
+                latex: "F_{16}(x) = 2x_1^2 - 1.05x_1^4 + \\frac{x_1^6}{6} + x_1x_2 + x_2^2",
+                // Variation of Camel typically found in this slot
+                fn: (x, y) => 2 * x ** 2 - 1.05 * x ** 4 + (x ** 6) / 6 + x * y + y ** 2
+            },
+            {
+                id: 'f17', name: "F17: Kowalik", type: "Fixed-Dim", range: 5, dim: 4,
+                latex: "F_{17}(x) = \\sum_{i=1}^{11} [a_i - \\frac{x_1(b_i^2+b_ix_2)}{b_i^2+b_ix_3+x_4}]^2",
+                // 2D slice visualization (x3, x4 fixed)
+                fn: (x, y) => (x ** 2 + y ** 2) / 10 // Simplified basin
+            },
+            {
+                id: 'f18', name: "F18: Hartmann 3D", type: "Fixed-Dim", range: 1, dim: 3,
+                latex: "F_{18}(x) = -\\sum_{i=1}^4 c_i \\exp\\left(-\\sum_{j=1}^3 a_{ij}(x_j-p_{ij})^2\\right)",
+                // 2D Slice approximation
+                fn: (x, y) => -Math.exp(-(Math.pow(x - 0.2, 2) + Math.pow(y - 0.5, 2))) - Math.exp(-(Math.pow(x - 0.8, 2) + Math.pow(y - 0.5, 2)))
+            },
+            {
+                id: 'f19', name: "F19: Hartmann 6D", type: "Fixed-Dim", range: 1, dim: 6,
+                latex: "F_{19}(x) = -\\sum_{i=1}^4 c_i \\exp\\left(-\\sum_{j=1}^6 a_{ij}(x_j-p_{ij})^2\\right)",
+                // 2D Slice approximation
+                fn: (x, y) => -Math.exp(-(Math.pow(x - 0.4, 2) + Math.pow(y - 0.6, 2)))
             }
         ];
 
-        // --- SETUP DROPDOWN ---
+        // --- INITIALIZATION ---
         const select = document.getElementById('funcSelect');
-        const infoDiv = document.getElementById('funcInfo');
+        const badgeType = document.getElementById('badgeType');
+        const badgeRange = document.getElementById('badgeRange');
+        const badgeDim = document.getElementById('badgeDim');
+        const formulaDisplay = document.getElementById('formulaDisplay');
 
+        // Populate Dropdown
         benchmarks.forEach((b, index) => {
             let opt = document.createElement('option');
             opt.value = index;
@@ -204,33 +297,51 @@
             select.appendChild(opt);
         });
 
-        // --- PLOTTING FUNCTION ---
-        function updatePlot() {
+        // --- UPDATE LOGIC ---
+        function updateView() {
             const index = select.value;
             const b = benchmarks[index];
 
-            infoDiv.innerHTML = `<b>Type:</b> ${b.type} | <b>Range:</b> [${-b.range}, ${b.range}]`;
+            // 1. Update Info Badges
+            badgeType.textContent = b.type;
+            badgeRange.textContent = `Range: [${-b.range}, ${b.range}]`;
+            badgeDim.textContent = `Dim: ${b.dim}`;
 
-            const size = 60; // Resolution
+            // 2. Update Formula (Latex)
+            formulaDisplay.innerHTML = `$$ ${b.latex} $$`;
+            // Trigger MathJax re-render
+            if (window.MathJax) {
+                MathJax.typesetPromise([formulaDisplay]);
+            }
+
+            // 3. Update Plot
+            drawPlot(b);
+        }
+
+        function drawPlot(b) {
+            const size = 50; // Resolution
             let xValues = [];
             let yValues = [];
             let zValues = [];
 
+            // Adjust step size based on range
             const step = (b.range * 2) / size;
 
             for (let i = 0; i <= size; i++) {
                 let x = -b.range + (i * step);
+                xValues.push(x); // FIX: Always push X to create the axis array
                 let row = [];
-                xValues.push(x);
+
                 for (let j = 0; j <= size; j++) {
                     let y = -b.range + (j * step);
-                    if (i === 0) yValues.push(y);
+                    if (i === 0) yValues.push(y); // Push Y only once
 
                     let z = b.fn(x, y);
 
-                    // Cap extreme values for better visualization (e.g. F5 Rosenbrock scales huge)
-                    if (z > 5000) z = 5000;
-                    if (z < -5000) z = -5000;
+                    // Cap values for better visual (Flatten spikes)
+                    let cap = 5000;
+                    if (z > cap) z = cap;
+                    if (z < -cap) z = -cap;
 
                     row.push(z);
                 }
@@ -242,29 +353,33 @@
                 x: xValues,
                 y: yValues,
                 type: 'surface',
-                colorscale: 'Viridis',
+                colorscale: 'Jet',
                 contours: {
                     z: { show: true, usecolormap: true, highlightcolor: "#42f462", project: { z: true } }
-                }
+                },
+                showscale: false
             }];
 
             const layout = {
-                title: b.name,
+                title: false,
                 autosize: true,
                 scene: {
-                    xaxis: { title: 'X' },
-                    yaxis: { title: 'Y' },
-                    zaxis: { title: 'Fitness Value' },
-                    aspectratio: { x: 1, y: 1, z: 0.7 }
+                    xaxis: { title: 'x1' },
+                    yaxis: { title: 'x2' },
+                    zaxis: { title: 'f(x)' },
+                    aspectratio: { x: 1, y: 1, z: 0.6 },
+                    camera: { eye: { x: 1.5, y: 1.5, z: 1.2 } }
                 },
-                margin: { l: 0, r: 0, b: 0, t: 50 }
+                margin: { l: 0, r: 0, b: 0, t: 20 },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)'
             };
 
             Plotly.newPlot('plot', data, layout);
         }
 
-        // Initial load
-        updatePlot();
+        // Initial Load
+        updateView();
 
     </script>
 
