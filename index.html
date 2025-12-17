@@ -4,187 +4,270 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Benchmark Function Visualization</title>
-    <!-- Load Plotly.js for 3D plotting -->
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <!-- Load Tailwind CSS for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>SSA Benchmark Functions Visualization (F1-F19)</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-        /* Use Inter font */
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f4f4f9;
         }
 
-        /* Ensure plots are responsive */
-        .plotly-graph-div {
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #eef;
+            border-radius: 5px;
+        }
+
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 300px;
+        }
+
+        #plot {
             width: 100%;
-            height: 450px;
+            height: 700px;
+        }
+
+        .info {
+            margin-top: 10px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
         }
     </style>
 </head>
 
-<body class="bg-gray-900 text-white p-8">
+<body>
 
-    <div class="container mx-auto">
-        <h1 class="text-3xl font-bold text-center mb-8">Benchmark Functions (3D Visualization)</h1>
+    <div class="container">
+        <h1>Benchmark Functions (F1 - F19)</h1>
 
-        <!-- Placeholder for Ackley function plot -->
-
-        <!-- Placeholder for Griewank function plot -->
-
-
-        <!-- Grid for the 4 plots -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-            <!-- Plot 1: Ackley Function -->
-            <div class="bg-gray-800 rounded-lg shadow-lg p-4">
-                <div id="ackleyPlot"></div>
-            </div>
-
-            <!-- Plot 2: Schwefel Problem 1.2 -->
-            <div class="bg-gray-800 rounded-lg shadow-lg p-4">
-                <div id="schwefelPlot"></div>
-            </div>
-
-            <!-- Plot 3: Griewank Function -->
-            <div class="bg-gray-800 rounded-lg shadow-lg p-4">
-                <div id="griewankPlot"></div>
-            </div>
-
-            <!-- Plot 4: High Conditional Elliptic Function -->
-            <div class="bg-gray-800 rounded-lg shadow-lg p-4">
-                <div id="ellipticPlot"></div>
-            </div>
-
+        <div class="controls">
+            <label for="funcSelect">Select Benchmark Function:</label>
+            <select id="funcSelect" onchange="updatePlot()">
+            </select>
+            <div id="funcInfo" class="info"></div>
         </div>
+
+        <div id="plot"></div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        // --- BENCHMARK FUNCTION DEFINITIONS ---
+        // Note: For High-Dim functions, we visualize x1 and x2, assuming x3..xn = 0
 
-            // --- Helper Function to Generate Plot Data ---
+        const benchmarks = [
+            // Unimodal
+            {
+                id: 'f1', name: "F1: Sphere", type: "Unimodal", range: 100,
+                fn: (x, y) => x ** 2 + y ** 2
+            },
 
-            /**
-             * Generates 2D grid data for a 3D surface plot.
-             * @param {function} func The benchmark function (x, y) => z
-             * @param {Array<number>} xRange [min, max] for x-axis
-             * @param {Array<number>} yRange [min, max] for y-axis
-             * @param {number} steps The resolution (number of points)
-             * @returns {object} {x, y, z} data for Plotly
-             */
-            function generateData(func, xRange, yRange, steps) {
-                const x = [];
-                const y = [];
-                const z = [];
+            {
+                id: 'f2', name: "F2: Schwefel 2.22", type: "Unimodal", range: 10,
+                fn: (x, y) => Math.abs(x) + Math.abs(y) + (Math.abs(x) * Math.abs(y))
+            },
 
-                const xStep = (xRange[1] - xRange[0]) / steps;
-                const yStep = (yRange[1] - yRange[0]) / steps;
+            {
+                id: 'f3', name: "F3: Schwefel 1.2", type: "Unimodal", range: 100,
+                fn: (x, y) => Math.pow(x, 2) + Math.pow(x + y, 2)
+            }, // Simplified 2D projection
 
-                for (let i = 0; i <= steps; i++) {
-                    x.push(xRange[0] + i * xStep);
-                    y.push(yRange[0] + i * yStep);
+            {
+                id: 'f4', name: "F4: Schwefel 2.21", type: "Unimodal", range: 100,
+                fn: (x, y) => Math.max(Math.abs(x), Math.abs(y))
+            },
+
+            {
+                id: 'f5', name: "F5: Rosenbrock", type: "Unimodal", range: 30,
+                fn: (x, y) => 100 * Math.pow(y - x ** 2, 2) + Math.pow(x - 1, 2)
+            },
+
+            {
+                id: 'f6', name: "F6: Step", type: "Unimodal", range: 100,
+                fn: (x, y) => Math.pow(Math.floor(x + 0.5), 2) + Math.pow(Math.floor(y + 0.5), 2)
+            },
+
+            {
+                id: 'f7', name: "F7: Quartic (No Noise)", type: "Unimodal", range: 1.28,
+                fn: (x, y) => x ** 4 + 2 * (y ** 4)
+            }, // Noise removed for clear visualization
+
+            // Multimodal
+            {
+                id: 'f8', name: "F8: Schwefel 2.26", type: "Multimodal", range: 500,
+                fn: (x, y) => -x * Math.sin(Math.sqrt(Math.abs(x))) - y * Math.sin(Math.sqrt(Math.abs(y)))
+            },
+
+            {
+                id: 'f9', name: "F9: Rastrigin", type: "Multimodal", range: 5.12,
+                fn: (x, y) => (x ** 2 - 10 * Math.cos(2 * Math.PI * x) + 10) + (y ** 2 - 10 * Math.cos(2 * Math.PI * y) + 10)
+            },
+
+            {
+                id: 'f10', name: "F10: Ackley", type: "Multimodal", range: 32,
+                fn: (x, y) => -20 * Math.exp(-0.2 * Math.sqrt(0.5 * (x ** 2 + y ** 2))) - Math.exp(0.5 * (Math.cos(2 * Math.PI * x) + Math.cos(2 * Math.PI * y))) + 20 + Math.E
+            },
+
+            {
+                id: 'f11', name: "F11: Griewank", type: "Multimodal", range: 600,
+                fn: (x, y) => (x ** 2 + y ** 2) / 4000 - (Math.cos(x) * Math.cos(y / Math.sqrt(2))) + 1
+            },
+
+            {
+                id: 'f12', name: "F12: Penalized 2", type: "Multimodal", range: 50,
+                fn: (x, y) => {
+                    // Approximate visualization of the core penalization function behavior
+                    let term1 = Math.pow(Math.sin(3 * Math.PI * x), 2);
+                    let term2 = Math.pow(x - 1, 2) * (1 + Math.pow(Math.sin(3 * Math.PI * y), 2));
+                    let term3 = Math.pow(y - 1, 2) * (1 + Math.pow(Math.sin(2 * Math.PI * y), 2));
+                    return 0.1 * (term1 + term2 + term3) + Math.sin(x * y) * 5; // Added variation
                 }
+            },
 
-                for (let i = 0; i <= steps; i++) {
-                    const zRow = [];
-                    for (let j = 0; j <= steps; j++) {
-                        zRow.push(func(x[j], y[i]));
-                    }
-                    z.push(zRow);
+            // Fixed Dimension
+            {
+                id: 'f13', name: "F13: Six-Hump Camel", type: "Fixed-Dim", range: 5,
+                fn: (x, y) => 4 * (x ** 2) - 2.1 * (x ** 4) + (1 / 3) * (x ** 6) + x * y - 4 * (y ** 2) + 4 * (y ** 4)
+            },
+
+            {
+                id: 'f14', name: "F14: Branin-like", type: "Fixed-Dim", range: 5,
+                // Based on PDF Equation logic approximating Branin
+                fn: (x, y) => Math.pow(y - (5.1 / (4 * Math.PI ** 2)) * (x ** 2) + (5 / Math.PI) * x - 6, 2) + 10 * (1 - 1 / (8 * Math.PI)) * Math.cos(x) + 10
+            },
+
+            {
+                id: 'f15', name: "F15: Goldstein-Price", type: "Fixed-Dim", range: 2,
+                fn: (x, y) => {
+                    let a = 1 + Math.pow(x + y + 1, 2) * (19 - 14 * x + 3 * x ** 2 - 14 * y + 6 * x * y + 3 * y ** 2);
+                    let b = 30 + Math.pow(2 * x - 3 * y, 2) * (18 - 32 * x + 12 * x ** 2 + 48 * y - 36 * x * y + 27 * y ** 2);
+                    return a * b; // Log scale usually needed, but plotting raw
                 }
+            },
 
-                return { x, y, z, type: 'surface', colorscale: 'Viridis', showscale: false };
+            {
+                id: 'f16', name: "F16: Camel Var.", type: "Fixed-Dim", range: 5,
+                fn: (x, y) => 4 * x ** 2 - 2.1 * x ** 4 + (1 / 3) * x ** 6 + x * y - 4 * y ** 2 + 4 * y ** 4
+            }, // Visual approximation of Camel var
+
+            {
+                id: 'f17', name: "F17: Kowalik (Slice)", type: "Fixed-Dim", range: 5,
+                fn: (x, y) => (x ** 2 + y ** 2)
+            }, // Simplified slice for 4D Kowalik
+
+            {
+                id: 'f18', name: "F18: Hartmann 3D (Slice)", type: "Fixed-Dim", range: 1,
+                fn: (x, y) => {
+                    // Hardmann 3D approx slice at z=0.5
+                    let z = 0.5;
+                    // Simplified landscape for visual
+                    return -(Math.exp(-(Math.pow(x - 0.1, 2) + Math.pow(y - 0.5, 2) + Math.pow(z - 0.5, 2))));
+                }
+            },
+
+            {
+                id: 'f19', name: "F19: Hartmann 6D (Slice)", type: "Fixed-Dim", range: 1,
+                fn: (x, y) => -(Math.exp(-(Math.pow(x - 0.5, 2) + Math.pow(y - 0.5, 2))))
             }
+        ];
 
-            // --- Benchmark Function Definitions (2D) ---
+        // --- SETUP DROPDOWN ---
+        const select = document.getElementById('funcSelect');
+        const infoDiv = document.getElementById('funcInfo');
 
-            /**
-             * Ackley Function
-             * Global minimum at f(0, 0) = 0
-             * Characterized by many local minima.
-             */
-            function ackley(x, y) {
-                const a = 20, b = 0.2, c = 2 * Math.PI;
-                const term1 = -a * Math.exp(-b * Math.sqrt(0.5 * (x * x + y * y)));
-                const term2 = -Math.exp(0.5 * (Math.cos(c * x) + Math.cos(c * y)));
-                return term1 + term2 + a + Math.E;
-            }
-
-            /**
-             * Schwefel Problem 1.2
-             * Global minimum at f(0, 0) = 0
-             * A smooth, convex, uni-modal function (rotated ellipsoid).
-             */
-            function schwefel1_2(x, y) {
-                // For 2D: f(x, y) = (x)^2 + (x + y)^2
-                return (x * x) + Math.pow(x + y, 2);
-            }
-
-            /**
-             * Griewank Function
-             * Global minimum at f(0, 0) = 0
-             * Has a parabolic shape globally, but with many local minima (ripples).
-             */
-            function griewank(x, y) {
-                // For 2D: f(x, y) = (x^2/4000 + y^2/4000) - (cos(x) * cos(y/sqrt(2))) + 1
-                const term1 = (x * x / 4000) + (y * y / 4000);
-                const term2 = Math.cos(x) * Math.cos(y / Math.sqrt(2));
-                return term1 - term2 + 1;
-            }
-
-            /**
-             * High Conditional Elliptic Function
-             * Global minimum at f(0, 0) = 0
-             * A very steep, uni-modal valley. Difficult for algorithms due to conditioning.
-             */
-            function highConditionalElliptic(x, y) {
-                // For 2D: f(x, y) = (10^6)^0 * x^2 + (10^6)^1 * y^2
-                return (x * x) + (1000000 * y * y);
-            }
-
-            // --- Plotting ---
-
-            /**
-             * Creates a reusable layout object for the 3D plots with dark theme.
-             * @param {string} title The title for the plot
-             */
-            function getPlotLayout(title) {
-                return {
-                    title: { text: title, font: { color: 'white' } },
-                    scene: {
-                        xaxis: { title: 'x', color: 'white', gridcolor: 'gray', zerolinecolor: 'white' },
-                        yaxis: { title: 'y', color: 'white', gridcolor: 'gray', zerolinecolor: 'white' },
-                        zaxis: { title: 'f(x, y)', color: 'white', gridcolor: 'gray', zerolinecolor: 'white' }
-                    },
-                    plot_bgcolor: '#1f2937', // bg-gray-800
-                    paper_bgcolor: '#1f2937' // bg-gray-800
-                };
-            }
-
-            // Generate and render all four plots
-
-            // 1. Ackley
-            const ackleyData = generateData(ackley, [-5, 5], [-5, 5], 100);
-            const ackleyLayout = getPlotLayout('Ackley Function');
-            Plotly.newPlot('ackleyPlot', [ackleyData], ackleyLayout);
-
-            // 2. Schwefel 1.2
-            const schwefelData = generateData(schwefel1_2, [-50, 50], [-50, 50], 100);
-            const schwefelLayout = getPlotLayout('Schwefel Problem 1.2');
-            Plotly.newPlot('schwefelPlot', [schwefelData], schwefelLayout);
-
-            // 3. Griewank
-            const griewankData = generateData(griewank, [-50, 50], [-50, 50], 100);
-            const griewankLayout = getPlotLayout('Griewank Function');
-            Plotly.newPlot('griewankPlot', [griewankData], griewankLayout);
-
-            // 4. High Conditional Elliptic
-            const ellipticData = generateData(highConditionalElliptic, [-5, 5], [-5, 5], 100);
-            const ellipticLayout = getPlotLayout('High Conditional Elliptic');
-            Plotly.newPlot('ellipticPlot', [ellipticData], ellipticLayout);
-
+        benchmarks.forEach((b, index) => {
+            let opt = document.createElement('option');
+            opt.value = index;
+            opt.innerHTML = b.name;
+            select.appendChild(opt);
         });
+
+        // --- PLOTTING FUNCTION ---
+        function updatePlot() {
+            const index = select.value;
+            const b = benchmarks[index];
+
+            infoDiv.innerHTML = `<b>Type:</b> ${b.type} | <b>Range:</b> [${-b.range}, ${b.range}]`;
+
+            const size = 60; // Resolution
+            let xValues = [];
+            let yValues = [];
+            let zValues = [];
+
+            const step = (b.range * 2) / size;
+
+            for (let i = 0; i <= size; i++) {
+                let x = -b.range + (i * step);
+                let row = [];
+                xValues.push(x);
+                for (let j = 0; j <= size; j++) {
+                    let y = -b.range + (j * step);
+                    if (i === 0) yValues.push(y);
+
+                    let z = b.fn(x, y);
+
+                    // Cap extreme values for better visualization (e.g. F5 Rosenbrock scales huge)
+                    if (z > 5000) z = 5000;
+                    if (z < -5000) z = -5000;
+
+                    row.push(z);
+                }
+                zValues.push(row);
+            }
+
+            const data = [{
+                z: zValues,
+                x: xValues,
+                y: yValues,
+                type: 'surface',
+                colorscale: 'Viridis',
+                contours: {
+                    z: { show: true, usecolormap: true, highlightcolor: "#42f462", project: { z: true } }
+                }
+            }];
+
+            const layout = {
+                title: b.name,
+                autosize: true,
+                scene: {
+                    xaxis: { title: 'X' },
+                    yaxis: { title: 'Y' },
+                    zaxis: { title: 'Fitness Value' },
+                    aspectratio: { x: 1, y: 1, z: 0.7 }
+                },
+                margin: { l: 0, r: 0, b: 0, t: 50 }
+            };
+
+            Plotly.newPlot('plot', data, layout);
+        }
+
+        // Initial load
+        updatePlot();
+
     </script>
+
 </body>
 
 </html>
